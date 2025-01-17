@@ -1,10 +1,126 @@
 ﻿@page "/"
-
-
+@rendermode InteractiveServer
 @inject IJSRuntime JSRuntime
+@using System.Text.Json
+@using WeatherApp.Dtos
+@using WeatherApp.Models
 
 <PageTitle>Home</PageTitle>
 
-@{
-    // Write C#
+<div class="container">
+    <div class="row">
+        <div class="col-md-6 offset-3">
+            <div class="input-group">
+                <input type="text"
+                       placeholder="Search for a city..."
+                       class="form-control"
+                       id="weatherCity"
+                       @bind="weatherCity">
+                <button class="btn btn-outline-secondary"
+                        @onclick="()=>CheckWeatherAsync(weatherCity)">
+                    Check weather
+                </button>
+
+                @if (isShowFavorite)
+                {
+                    <button class="btn btn-outline-secondary"
+                            @onclick="() => FavoriteCity()">
+                        Favorite @CityName
+                    </button>
+                }
+            </div>
+
+            <hr />
+
+            @if (weatherResponse != null && weatherResponse.Sys != null)
+            {
+
+                <div class="card text-center">
+                    <div class="card-header" id="weather_city">
+                        @weatherResponse.Name, @weatherResponse.Sys.Country
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title" id="weather_icon">
+                            <img width="50px" src="http://openweathermap.org/img/wn/@weatherResponse.Weather[0].Icon@@4x.png" />
+                        </h5>
+                        <p class="card-text" id="weather_forecast">
+                            @weatherResponse.Weather[0].Main
+                        </p>
+                        <p class="card-text" id="weather_temperature">
+                            @weatherResponse.Main.Temp &#176
+                        </p>
+
+                    </div>
+                </div>
+            }
+
+        </div>
+    </div>
+</div>
+
+@code {
+    private string weatherCity = "";
+    private static Boolean isShowFavorite = false;
+    private static string CityName = "";
+    private DotNetObjectReference<Home> dotnetHelper;
+    private WeatherResponse weatherResponse = new WeatherResponse();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // await JSRuntime.InvokeVoidAsync("alert", "Welcome to this course!");
+            // await JSRuntime.InvokeVoidAsync("localStorage.setItem", "welcomeTxt", "Welcome to this course!");
+            dotnetHelper = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("jsHelper.setDotNetHelper", dotnetHelper);
+            await JSRuntime.InvokeVoidAsync("import", "/scripts/custom.js");
+        }
+    }
+
+    protected async Task CheckWeatherAsync(string cityName)
+    {
+        weatherResponse = await JSRuntime.InvokeAsync<WeatherResponse>("checkWeather", cityName);
+    }
+
+    [JSInvokable]
+    public static async Task ShowFavoriteButton(string cityName)
+    {
+        CityName = cityName;
+        isShowFavorite = true;
+    }
+
+    [JSInvokable]
+    public async Task FavoriteCity()
+    {
+        // Get all items
+        var items = await JSRuntime.InvokeAsync<List<FavoritedCity>>("localStorage.getItem", "favoriteCities");
+
+        if (items == null)
+        {
+            items = new List<FavoritedCity>();
+        }
+        // Update list
+        items.Add(new FavoritedCity()
+            {
+                Id = 1,
+                CityName = CityName
+            });
+
+        // Set new item
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "favoriteCities", JsonSerializer.Serialize(items));
+
+    }
 }
+
+<script>
+
+    var jsHelper = {};
+    jsHelper.setDotNetHelper = function( helper){
+        jsHelper.dotNetHelper = helper;
+    }
+
+    function favoriteCity() {
+        jsHelper.dotnetHelper.invokeMethodAsync('FavoriteCity');
+    }
+
+</script>

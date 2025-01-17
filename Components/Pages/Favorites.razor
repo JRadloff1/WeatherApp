@@ -1,0 +1,50 @@
+﻿@page "/favorites"
+@using WeatherApp.Components.Pages.Child
+@using WeatherApp.Models
+
+<PageTitle>Favorites</PageTitle>
+
+
+@if (favoritedCities == null || favoritedCities.Count == 0)
+{
+    <p><em>No favorites</em></p>
+}
+else
+{
+    <div class="row">
+        @foreach (var city in favoritedCities)
+        {
+            <ErrorBoundary>
+                <ChildContent>
+                    <FavoriteCity City="@city"></FavoriteCity>
+                </ChildContent>
+               <ErrorContent>
+                   <div>
+                       <p class="alert alert-danger" role="alert">
+                           Something went wrong loading your favorite city!
+                       </p>
+                   </div>
+               </ErrorContent>
+            </ErrorBoundary>
+        }
+    </div>
+}
+
+@code {
+    private List<FavoritedCity> favoritedCities = new List<FavoritedCity>()
+    {
+        new FavoritedCity(){
+            Id =1,
+            CityName="London"
+        },
+        new FavoritedCity(){
+            Id=2,
+            CityName = "New York"
+        }
+    }; // Default initialization
+
+    protected override async Task OnInitializedAsync()
+    {
+        //throw new Exception("This is a custom exception");
+    }
+}
